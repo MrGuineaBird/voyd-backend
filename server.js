@@ -1,39 +1,39 @@
-// server.js
 const express = require('express');
 const multer = require('multer');
-const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Memory storage for uploaded files
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+// Store videos in memory
+const videos = [];
 
-// Serve static frontend
-app.use(express.static('frontend'));
+// Serve frontend
+app.use(express.static('public'));
 
-// Handle video upload
+// Multer memory storage
+const upload = multer({ storage: multer.memoryStorage() });
+
+// Upload endpoint
 app.post('/upload', upload.single('video'), (req, res) => {
-    if (!req.file) {
-        return res.status(400).send('No file uploaded.');
-    }
-
-    // Convert uploaded file buffer to a Base64 URL so frontend can play it
-    const videoBase64 = req.file.buffer.toString('base64');
-    const mimeType = req.file.mimetype;
-    const videoURL = `data:${mimeType};base64,${videoBase64}`;
-
-    res.send(`
-        <h2>Uploaded Video</h2>
-        <video width="640" controls>
-            <source src="${videoURL}" type="${mimeType}">
-            Your browser does not support the video tag.
-        </video>
-        <br><a href="/">Upload another video</a>
-    `);
+    if (!req.file) return res.status(400).send('No file uploaded.');
+    const id = Date.now().toString();
+    videos.push({ id, buffer: req.file.buffer, mimetype: req.file.mimetype });
+    res.json({ id });
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+// Serve video by id
+app.get('/videos/:id', (req, res) => {
+    const video = videos.find(v => v.id === req.params.id);
+    if (!video) return res.status(404).send('Video not found');
+    res.setHeader('Content-Type', video.mimetype);
+    res.send(video.buffer);
 });
+
+// Feed endpoint
+app.get('/feed', (req, res) => {
+    const feed = videos.map(v => `/videos/${v.id}`);
+    res.json(feed);
+});
+
+// Start server
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
