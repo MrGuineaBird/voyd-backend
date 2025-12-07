@@ -1,29 +1,39 @@
+// server.js
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-// Ensure uploads folder exists
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+// Memory storage for uploaded files
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
-// Multer setup
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
-});
-const upload = multer({ storage });
-
-// Serve static frontend files
+// Serve static frontend
 app.use(express.static('frontend'));
 
-// Upload endpoint
+// Handle video upload
 app.post('/upload', upload.single('video'), (req, res) => {
-  if (!req.file) return res.status(400).send('No file uploaded.');
-  res.send(`Uploaded: ${req.file.originalname}`);
+    if (!req.file) {
+        return res.status(400).send('No file uploaded.');
+    }
+
+    // Convert uploaded file buffer to a Base64 URL so frontend can play it
+    const videoBase64 = req.file.buffer.toString('base64');
+    const mimeType = req.file.mimetype;
+    const videoURL = `data:${mimeType};base64,${videoBase64}`;
+
+    res.send(`
+        <h2>Uploaded Video</h2>
+        <video width="640" controls>
+            <source src="${videoURL}" type="${mimeType}">
+            Your browser does not support the video tag.
+        </video>
+        <br><a href="/">Upload another video</a>
+    `);
 });
 
-app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
