@@ -9,7 +9,7 @@ from . import models, crud
 
 Base.metadata.create_all(bind=engine)
 
-UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "videos")
+UPLOAD_DIR = "videos"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 app = FastAPI(title="VØYD Backend")
@@ -111,3 +111,4 @@ def comment(video_id: int, text: str = Form(...), db: Session = Depends(get_db))
     if not c:
         raise HTTPException(404)
     return {"id": c.id, "text": c.text}
+
